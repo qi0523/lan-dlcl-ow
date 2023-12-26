@@ -90,14 +90,14 @@ setup_primary() {
 
     # Download and install helm
     pushd $INSTALL_DIR/install
-    curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3
-    chmod 744 get_helm.sh
+    sudo curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3
+    sudo chmod 744 get_helm.sh
     sudo ./get_helm.sh
     popd
 
     # initialize k8 primary node
     printf "%s: %s\n" "$(date +"%T.%N")" "Starting Kubernetes... (this can take several minutes)... "
-    sudo kubeadm init --apiserver-advertise-address=$HOST_ETH0_IP --pod-network-cidr=10.240.0.0/12 > $INSTALL_DIR/k8s_install.log 2>&1
+    sudo kubeadm init --apiserver-advertise-address=$HOST_ETH0_IP --pod-network-cidr=10.240.0.0/12 | sudo tee $INSTALL_DIR/k8s_install.log
     if [ $? -eq 0 ]; then
         printf "%s: %s\n" "$(date +"%T.%N")" "Done! Output in $INSTALL_DIR/k8s_install.log"
     else
@@ -115,16 +115,16 @@ setup_primary() {
     printf "%s: %s\n" "$(date +"%T.%N")" "Done!"
 
     ### TODO: remove taint master, completed
-    kubectl taint nodes --all node-role.kubernetes.io/master-
-    kubectl taint nodes --all node-role.kubernetes.io/control-plane-
+    sudo su $USER -c 'kubectl taint nodes --all node-role.kubernetes.io/master-'
+    sudo su $USER -c 'kubectl taint nodes --all node-role.kubernetes.io/control-plane-'
 }
 
 apply_flannel() {
     # flannel
     pushd $INSTALL_DIR/install
-    wget https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
-    sed -i 's/10.244.0.0\/16/10.240.0.0\/12/g' kube-flannel.yml
-    kubectl apply -f kube-flannel.yml >> $INSTALL_DIR/flannel_install.log 2>&1
+    sudo wget https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
+    sudo sed -i 's/10.244.0.0\/16/10.240.0.0\/12/g' kube-flannel.yml
+    sudo su $USER -c 'kubectl apply -f kube-flannel.yml'
     popd
     # https://projectcalico.docs.tigera.io/getting-started/kubernetes/helm
     printf "%s: %s\n" "$(date +"%T.%N")" "Loaded flannel pods"
@@ -137,20 +137,20 @@ apply_flannel() {
     # wait for flannel pods to be in ready state
     printf "%s: %s\n" "$(date +"%T.%N")" "Waiting for flannel pods to have status of 'Running': "
     sleep 10
-    NUM_PODS=$(kubectl get pods -A | grep flannel | wc -l)
+    NUM_PODS=$(sudo su $USER -c 'kubectl get pods -A | grep flannel | wc -l')
     while [ "$NUM_PODS" -eq 0 ]
     do
         sleep 5
         printf "."
-        NUM_PODS=$(kubectl get pods -A | grep flannel | wc -l)
+        NUM_PODS=$(sudo su $USER -c 'kubectl get pods -A | grep flannel | wc -l')
     done
-    NUM_RUNNING=$(kubectl get pods -A | grep flannel | grep " Running" | wc -l)
+    NUM_RUNNING=$(sudo su $USER -c 'kubectl get pods -A | grep flannel | grep " Running" | wc -l')
     NUM_RUNNING=$((NUM_PODS-NUM_RUNNING))
     while [ "$NUM_RUNNING" -ne 0 ]
     do
         sleep 5
         printf "."
-        NUM_RUNNING=$(kubectl get pods -A | grep flannel | grep " Running" | wc -l)
+        NUM_RUNNING=$(sudo su $USER -c 'kubectl get pods -A | grep flannel | grep " Running" | wc -l')
         NUM_RUNNING=$((NUM_PODS-NUM_RUNNING))
     done
     printf "%s: %s\n" "$(date +"%T.%N")" "flannel running!"
@@ -161,7 +161,7 @@ add_cluster_nodes() { ## $1 == 1
     REMOTE_CMD=$(awk -v line=$(awk '{if($1=="kubeadm")print NR}' $INSTALL_DIR/k8s_install.log) '{if(NR>=line && NR<line+2){print $0}}' $INSTALL_DIR/k8s_install.log)
     printf "%s: %s\n" "$(date +"%T.%N")" "Remote command is: $REMOTE_CMD"
 
-    NUM_REGISTERED=$(kubectl get nodes | wc -l)
+    NUM_REGISTERED=$(sudo su $USER -c 'kubectl get nodes | wc -l')
     NUM_REGISTERED=$(($1-NUM_REGISTERED+1))
     counter=0
     while [ "$NUM_REGISTERED" -ne 0 ]
@@ -177,18 +177,18 @@ add_cluster_nodes() { ## $1 == 1
             exec 3<&-
         done
 	counter=$((counter+1))
-        NUM_REGISTERED=$(kubectl get nodes | wc -l)
+        NUM_REGISTERED=$(sudo su $USER -c 'kubectl get nodes | wc -l')
         NUM_REGISTERED=$(($1-NUM_REGISTERED+1)) 
     done
 
     printf "%s: %s\n" "$(date +"%T.%N")" "Waiting for all nodes to have status of 'Ready': "
-    NUM_READY=$(kubectl get nodes | grep " Ready" | wc -l)
+    NUM_READY=$(sudo su $USER -c 'kubectl get nodes | grep " Ready" | wc -l')
     NUM_READY=$(($1-NUM_READY))
     while [ "$NUM_READY" -ne 0 ]
     do
         sleep 10
         printf "."
-        NUM_READY=$(kubectl get nodes | grep " Ready" | wc -l)
+        NUM_READY=$(sudo su $USER -c 'kubectl get nodes | grep " Ready" | wc -l')
         NUM_READY=$(($1-NUM_READY))
     done
     printf "%s: %s\n" "$(date +"%T.%N")" "Done!" 
@@ -245,11 +245,8 @@ prepare_for_openwhisk() {
     fi
 
     # nfs-subdir-external-provisioner
-    helm repo add nfs-subdir-external-provisioner https://kubernetes-sigs.github.io/nfs-subdir-external-provisioner/
-    helm install nfs-provisioner nfs-subdir-external-provisioner/nfs-subdir-external-provisioner \
-        --set nfs.server=$HOST_ETH0_IP \
-        --set nfs.path=$NFS_DIR \
-        --set storageClass.defaultClass=true
+    sudo su $USER -c 'helm repo add nfs-subdir-external-provisioner https://kubernetes-sigs.github.io/nfs-subdir-external-provisioner/'
+    sudo su $USER -c "helm install nfs-provisioner nfs-subdir-external-provisioner/nfs-subdir-external-provisioner --set nfs.server=$HOST_ETH0_IP --set nfs.path=$NFS_DIR --set storageClass.defaultClass=true"
 
     if [ "$?" -ne 0 ]; then
         echo "nfs provisioner failed..."
@@ -257,21 +254,21 @@ prepare_for_openwhisk() {
     fi
 
     # k8s sc
-    nfs_client_running_num=$(kubectl get pods -A | grep nfs-provisioner | grep Running | wc -l)
+    nfs_client_running_num=$(sudo su $USER -c 'kubectl get pods -A | grep nfs-provisioner | grep Running | wc -l')
     while [ "$nfs_client_running_num" -eq 0 ]
     do
         sleep 3
         echo "wait for nfs_provisioner_running...."
-        nfs_client_running_num=$(kubectl get pods -A | grep nfs-provisioner | grep Running | wc -l)
+        nfs_client_running_num=$(sudo su $USER -c 'kubectl get pods -A | grep nfs-provisioner | grep Running | wc -l')
     done
 
     #label nodes=core 
-    CONTROLLER_NODE=$(kubectl get nodes | grep master | awk '{print $1}')
+    CONTROLLER_NODE=$(sudo su $USER -c 'kubectl get nodes' | grep master | awk '{print $1}')
     kubectl label nodes ${CONTROLLER_NODE} openwhisk-role=core
     # label nodes=invoker
-    INVOKER_NODES=$(kubectl get nodes | grep ow | awk '{print $1}')
+    INVOKER_NODES=$(sudo su $USER -c 'kubectl get nodes' | grep ow | awk '{print $1}')
     while IFS= read -r line; do
-        kubectl label nodes ${line} openwhisk-role=invoker
+        sudo su $USER -c  "kubectl label nodes ${line} openwhisk-role=invoker"
         if [ $? -ne 0 ]; then
             echo "***Error: Failed to set openwhisk role to invoker on ${line:5}."
             exit -1
@@ -281,12 +278,12 @@ prepare_for_openwhisk() {
     printf "%s: %s\n" "$(date +"%T.%N")" "Finished labelling nodes."
 
     # git clone qi0523/openwhisk-deploy-bue
-    git clone https://github.com/qi0523/openwhisk-deploy-kube $INSTALL_DIR/openwhisk-deploy-kube
+    sudo su $USER -c "git clone https://github.com/qi0523/openwhisk-deploy-kube $INSTALL_DIR/openwhisk-deploy-kube"
 
     pushd $INSTALL_DIR/openwhisk-deploy-kube
-    sed -i "s/REPLACE_ME_WITH_IP/$HOST_ETH0_IP/g" mycluster.yaml
+    sudo su $USER -c "sed -i 's/REPLACE_ME_WITH_IP/$HOST_ETH0_IP/g' mycluster.yaml"
     popd
-    kubectl create namespace openwhisk
+    sudo su $USER -c 'kubectl create namespace openwhisk'
     if [ $? -ne 0 ]; then
         echo "***Error: Failed to create openwhisk namespace"
         exit 1
@@ -295,7 +292,7 @@ prepare_for_openwhisk() {
 
     pushd $INSTALL_DIR/install
     # Download and install the OpenWhisk CLI
-    wget https://github.com/apache/openwhisk-cli/releases/download/latest/OpenWhisk_CLI-latest-linux-386.tgz
+    sudo wget https://github.com/apache/openwhisk-cli/releases/download/latest/OpenWhisk_CLI-latest-linux-386.tgz
     sudo tar -xzvf OpenWhisk_CLI-latest-linux-386.tgz -C /usr/local/bin wsk
 
     # Set up wsk properties for all users

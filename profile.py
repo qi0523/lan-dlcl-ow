@@ -52,6 +52,12 @@ pc.defineParameter("N", "Number of virtual nodes (containers)",
 pc.defineParameter("X", "Number of containers per physical node",
                    portal.ParameterType.INTEGER, 16)
 
+pc.defineParameter("invoker_memory",
+                   "Invoker memory",
+                   portal.ParameterType.INTEGER,
+                   6,
+                   longDescription="Invoker memory.")
+
 pc.defineParameter("masterIP", 
                    "Master ip address",
                    portal.ParameterType.STRING, 
@@ -154,7 +160,7 @@ node1.addService(rspec.Execute(shell="sh", command="bash /local/repository/contr
 
 for i in range(1, params.N+1):
   node = request.XenVM("ow%d" % i)
-  node.ram = 8192
+  node.ram = params.invoker_memory * 1024
   node.cores = 2
   if params.shared:
       node.exclusive = False
