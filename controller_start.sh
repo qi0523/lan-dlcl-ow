@@ -162,7 +162,7 @@ add_cluster_nodes() { ## $1 == 1
     printf "%s: %s\n" "$(date +"%T.%N")" "Remote command is: $REMOTE_CMD"
 
     NUM_REGISTERED=$(sudo su $USER -c 'kubectl get nodes | wc -l')
-    NUM_REGISTERED=$(($1-NUM_REGISTERED+1))
+    NUM_REGISTERED=$(($1-NUM_REGISTERED+2))
     counter=0
     while [ "$NUM_REGISTERED" -ne 0 ]
     do 
@@ -178,18 +178,18 @@ add_cluster_nodes() { ## $1 == 1
         done
 	counter=$((counter+1))
         NUM_REGISTERED=$(sudo su $USER -c 'kubectl get nodes | wc -l')
-        NUM_REGISTERED=$(($1-NUM_REGISTERED+1)) 
+        NUM_REGISTERED=$(($1-NUM_REGISTERED+2)) 
     done
 
     printf "%s: %s\n" "$(date +"%T.%N")" "Waiting for all nodes to have status of 'Ready': "
     NUM_READY=$(sudo su $USER -c 'kubectl get nodes | grep " Ready" | wc -l')
-    NUM_READY=$(($1-NUM_READY))
+    NUM_READY=$(($1-NUM_READY+1))
     while [ "$NUM_READY" -ne 0 ]
     do
         sleep 10
         printf "."
         NUM_READY=$(sudo su $USER -c 'kubectl get nodes | grep " Ready" | wc -l')
-        NUM_READY=$(($1-NUM_READY))
+        NUM_READY=$(($1-NUM_READY+1))
     done
     printf "%s: %s\n" "$(date +"%T.%N")" "Done!" 
 }
