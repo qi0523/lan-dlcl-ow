@@ -70,7 +70,7 @@ wait_join_k8s() {
 	if [ -z "$nc_PID" ]
 	then
 	    printf "%s: %s\n" "$(date +"%T.%N")" "Restarting listener via netcat..."
-	    coproc nc { nc -l $1 $SECONDARY_PORT; }
+	    coproc nc { nc -l $HOST_ETH0_IP $INVOKER_PORT; }
 	fi
     done
     MY_CMD=$(echo sudo $MY_CMD | sed 's/\\//')
