@@ -146,6 +146,7 @@ node1.ram = params.controller_memory
 node1.disk_image = image
 
 node1.hardware_type = params.hardware_type
+node1.component_id = "urn:publicid:IDN+cloudlab.umass.edu+node+pc67"
 
 # Add extra storage space
 if (params.tempFileSystemSize > 0):
