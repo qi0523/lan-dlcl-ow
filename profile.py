@@ -14,7 +14,7 @@ import geni.rspec.emulab
 #
 # This is a typical list of images.
 #
-image = "urn:publicid:IDN+cloudlab.umass.edu+image+containernetwork-PG0:k8s-reg-dlcl"
+image = "urn:publicid:IDN+cloudlab.umass.edu+image+containernetwork-PG0:k8s-reg-dlcl-lan"
 
 pc = portal.Context()
 

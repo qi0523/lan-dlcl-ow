@@ -12,21 +12,21 @@ HOST_NAME=$(hostname | awk 'BEGIN{FS="."} {print $1}')
 BASE_IP="10.88.10."
 
 # change hostname
-sudo hostnamectl set-hostname $HOST_NAME
-sudo sed -i "4a 127.0.0.1 $HOST_NAME" /etc/hosts
+# sudo hostnamectl set-hostname $HOST_NAME
+# sudo sed -i "4a 127.0.0.1 $HOST_NAME" /etc/hosts
 
 #role: control-plane
 
 ## modify containerd, TODO:
-sudo apt update
-sudo apt install -y apparmor apparmor-utils
+# sudo apt update
+# sudo apt install -y apparmor apparmor-utils
 
 ## cni plugins TODO:
-sudo chown -R $USER:$USER_GROUP $INSTALL_DIR
-pushd $INSTALL_DIR/install
+# sudo chown -R $USER:$USER_GROUP $INSTALL_DIR
+# pushd $INSTALL_DIR/install
 # wget https://github.com/containernetworking/plugins/releases/download/v1.1.1/cni-plugins-linux-amd64-v1.1.1.tgz
-sudo tar Cxzvf /opt/cni/bin cni-plugins-linux-amd64-v1.1.1.tgz
-popd
+# sudo tar Cxzvf /opt/cni/bin cni-plugins-linux-amd64-v1.1.1.tgz
+# popd
 
 # sudo sed -i 's/GRUB_CMDLINE_LINUX="/GRUB_CMDLINE_LINUX="cgroup_enable=memory swapaccount=1,/' /etc/default/grub
 # sudo update-grub
@@ -245,8 +245,8 @@ prepare_for_openwhisk() {
     fi
 
     # nfs-subdir-external-provisioner
-    sudo su $USER -c 'helm repo add nfs-subdir-external-provisioner https://kubernetes-sigs.github.io/nfs-subdir-external-provisioner/'
-    sudo su $USER -c "helm install nfs-provisioner nfs-subdir-external-provisioner/nfs-subdir-external-provisioner --set nfs.server=$HOST_ETH0_IP --set nfs.path=$NFS_DIR --set storageClass.defaultClass=true"
+    helm repo add nfs-subdir-external-provisioner https://kubernetes-sigs.github.io/nfs-subdir-external-provisioner/
+    helm install nfs-provisioner nfs-subdir-external-provisioner/nfs-subdir-external-provisioner --set nfs.server=$HOST_ETH0_IP --set nfs.path=$NFS_DIR --set storageClass.defaultClass=true
 
     if [ "$?" -ne 0 ]; then
         echo "nfs provisioner failed..."
@@ -254,21 +254,21 @@ prepare_for_openwhisk() {
     fi
 
     # k8s sc
-    nfs_client_running_num=$(sudo su $USER -c 'kubectl get pods -A | grep nfs-provisioner | grep Running | wc -l')
+    nfs_client_running_num=$(kubectl get pods -A | grep nfs-provisioner | grep Running | wc -l)
     while [ "$nfs_client_running_num" -eq 0 ]
     do
         sleep 3
         echo "wait for nfs_provisioner_running...."
-        nfs_client_running_num=$(sudo su $USER -c 'kubectl get pods -A | grep nfs-provisioner | grep Running | wc -l')
+        nfs_client_running_num=$(kubectl get pods -A | grep nfs-provisioner | grep Running | wc -l)
     done
 
     #label nodes=core 
-    CONTROLLER_NODE=$(sudo su $USER -c 'kubectl get nodes' | grep master | awk '{print $1}')
+    CONTROLLER_NODE=$(kubectl get nodes | grep master | awk '{print $1}')
     kubectl label nodes ${CONTROLLER_NODE} openwhisk-role=core
     # label nodes=invoker
-    INVOKER_NODES=$(sudo su $USER -c 'kubectl get nodes' | grep ow | awk '{print $1}')
+    INVOKER_NODES=$(kubectl get nodes | grep ow | awk '{print $1}')
     while IFS= read -r line; do
-        sudo su $USER -c  "kubectl label nodes ${line} openwhisk-role=invoker"
+        kubectl label nodes ${line} openwhisk-role=invoker
         if [ $? -ne 0 ]; then
             echo "***Error: Failed to set openwhisk role to invoker on ${line:5}."
             exit -1
@@ -278,12 +278,12 @@ prepare_for_openwhisk() {
     printf "%s: %s\n" "$(date +"%T.%N")" "Finished labelling nodes."
 
     # git clone qi0523/openwhisk-deploy-bue
-    sudo su $USER -c "git clone https://github.com/qi0523/openwhisk-deploy-kube $INSTALL_DIR/openwhisk-deploy-kube"
+    git clone https://github.com/qi0523/openwhisk-deploy-kube $INSTALL_DIR/openwhisk-deploy-kube
 
     pushd $INSTALL_DIR/openwhisk-deploy-kube
-    sudo su $USER -c "sed -i 's/REPLACE_ME_WITH_IP/$HOST_ETH0_IP/g' mycluster.yaml"
+    sed -i "s/REPLACE_ME_WITH_IP/$HOST_ETH0_IP/g" mycluster.yaml
     popd
-    sudo su $USER -c 'kubectl create namespace openwhisk'
+    kubectl create namespace openwhisk
     if [ $? -ne 0 ]; then
         echo "***Error: Failed to create openwhisk namespace"
         exit 1
@@ -342,15 +342,15 @@ done
 printf ")\n"
 
 # Kubernetes does not support swap, so we must disable it
-disable_swap
+# disable_swap
 
 # Use mountpoint (if it exists) to set up additional docker image storage
-if test -d "/mydata"; then
-    configure_docker_storage
-fi
+# if test -d "/mydata"; then
+#     configure_docker_storage
+# fi
 
 # Use second argument (node IP) to replace filler in kubeadm configuration
-sudo sed -i "s/REPLACE_ME_WITH_IP/$HOST_ETH0_IP/g" /etc/systemd/system/kubelet.service.d/10-kubeadm.conf
+# sudo sed -i "s/REPLACE_ME_WITH_IP/$HOST_ETH0_IP/g" /etc/systemd/system/kubelet.service.d/10-kubeadm.conf
 
 #coproc nc { nc -l $HOST_ETH0_IP $MASTER_PORT; }
 
@@ -358,14 +358,14 @@ sudo sed -i "s/REPLACE_ME_WITH_IP/$HOST_ETH0_IP/g" /etc/systemd/system/kubelet.s
 
 # wait_ips $1
 
-setup_primary $HOST_ETH0_IP
+# setup_primary $HOST_ETH0_IP
 
 # Apply flannel networking
-apply_flannel
+# apply_flannel
 
 # Coordinate master to add nodes to the kubernetes cluster
 # Argument is number of nodes
-add_cluster_nodes $1
+# add_cluster_nodes $1
 # add_cluster_nodes_scale $1
 
 # Exit early if we don't need to deploy OpenWhisk
