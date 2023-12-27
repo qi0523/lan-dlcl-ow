@@ -154,7 +154,7 @@ if (params.tempFileSystemSize > 0):
     bs1.placement = "any"
 
 iface1 = node1.addInterface("eth1")
-iface1.addAddress(pg.IPv4Address("12.12.1.1", "255.255.0.0"))
+iface1.addAddress(pg.IPv4Address("10.88.1.1", "255.255.0.0"))
 lan.addInterface(iface1)
 node1.addService(rspec.Execute(shell="sh", command="bash /local/repository/controller_start.sh {} &".format(params.N)))
 
@@ -179,7 +179,7 @@ for i in range(1, params.N+1):
     
   if params.lan:
     iface = node.addInterface("eth1")
-    iface.addAddress(pg.IPv4Address("12.12.10."+str(i), "255.255.0.0"))
+    iface.addAddress(pg.IPv4Address("10.88.10."+str(i), "255.255.0.0"))
     lan.addInterface(iface)
   node.addService(rspec.Execute(shell="sh", command="bash /local/repository/invoker_start.sh 12.12.1.1 {} {} {} &".format(params.bandwidth, params.registryIP, params.disk * 1024 * 1024)))
 

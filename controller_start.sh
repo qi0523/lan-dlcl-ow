@@ -9,7 +9,7 @@ INVOKER_PORT=3001
 INSTALL_DIR=/home/cloudlab-openwhisk
 HOST_ETH0_IP=$(ifconfig eth1 | awk 'NR==2{print $2}')
 HOST_NAME=$(hostname | awk 'BEGIN{FS="."} {print $1}')
-BASE_IP="12.12.10."
+BASE_IP="10.88.10."
 
 # change hostname
 sudo hostnamectl set-hostname $HOST_NAME
